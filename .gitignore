@@ -1,0 +1,22 @@
+# Internal learning and session files — never push these
+CLAUDE.md
+learnings.md
+memory.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# Data and model files
+data/raw/
+data/*.jsonl
+adapters/
+*.safetensors
+*.bin
+
+# OS
+.DS_Store
