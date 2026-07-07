@@ -86,7 +86,41 @@ Some formatted rows could theoretically contain the word "positive/negative/neut
 ## Phase 2 — Training
 
 ### File: `train_sentiment.py`
-*(Not built yet — decisions will be added here as we build)*
+
+**What it does:**
+Loads Qwen3-1.7B in 4-bit (QLoRA), attaches a blank LoRA adapter, trains on `data/training-ready.jsonl` for 3 epochs, saves the adapter to `adapters/sentiment/`.
+
+---
+
+**Decision: Use `bf16` not `fp16` on CUDA**
+
+On first full training run on RunPod A40, training crashed immediately with:
+```
+NotImplementedError: "_amp_foreach_non_finite_check_and_unscale_cuda" not implemented for 'BFloat16'
+```
+
+**Why it happened:**
+`fp16` (float16) requires a gradient scaler — a PyTorch mechanism that checks every gradient for overflow and rescales them. That scaler has a CUDA kernel called `_amp_foreach_non_finite_check_and_unscale_cuda`. This kernel does not exist for BFloat16 tensors.
+
+The A40 is an Ampere architecture GPU. Ampere GPUs use BFloat16 as their native half-precision format. When the fp16 gradient scaler ran on the A40, it found BFloat16 tensors and crashed.
+
+**The fix:**
+Change `fp16=True` to `bf16=True` in SFTConfig.
+
+BFloat16 has the same exponent range as float32 — it cannot overflow, so it does not need a gradient scaler at all. All modern GPUs (A40, A100, H100, RTX 3090+) support BFloat16 natively.
+
+```
+fp16 → needs gradient scaler → scaler not implemented for BFloat16 → crash
+bf16 → no gradient scaler needed → works on all Ampere GPUs
+```
+
+**Rule going forward:**
+Always use `bf16=True` on any Ampere or newer GPU. Use `fp16=True` only on older Volta/Turing GPUs (V100, T4). Use neither on CPU or MPS (Mac).
+
+---
+
+**Decision: `MAX_ROWS = None` for full training, `200` for laptop smoke test**
+The same script runs on laptop (smoke test) and cloud (full training). Controlled by one variable at the top. Never commit `None` if the smoke test is still running — swap back to `200` first.
 
 ---
 
