@@ -291,12 +291,14 @@ GRAFANA_PORT=3000
 ## Phase-by-Phase Build Plan
 
 ### Phase 1 — Data + First Training Run (Week 1)
-- [ ] Install dependencies: transformers, peft, trl, bitsandbytes, datasets
-- [x] Run `dwn-train-ready.py` — download FinGPT dataset, normalize labels, format to Qwen3 chat format
-- [ ] Format into instruction template, tokenize with Qwen 3 tokenizer
-- [ ] Run first training job on Qwen 3 1.7B (laptop, just to see it work)
-- [ ] Verify loss goes down, model produces sensible outputs
-- [ ] **Milestone:** Model trained on sentiment task, running on laptop
+- [x] Install dependencies: transformers, peft, trl, bitsandbytes, datasets
+- [x] Run `dwn-train-ready.py` — download FinGPT dataset, normalize 9 labels → 3, format to Qwen3 chat format
+- [x] Run `audit-training-ready.py` — verify label distribution and formatting before training
+- [x] Format into instruction template, tokenize with Qwen3 tokenizer
+- [x] Smoke test on laptop — Qwen3-1.7B, 200 rows, 75 steps, loss 1.97 → 1.69 ✅
+- [x] Verify loss goes down, adapter saved to `adapters/sentiment/`
+- [ ] Full training on GCP GPU VM — Qwen3-1.7B, all 76,000 rows, 3 epochs, ~2 hours
+- [ ] **Milestone:** Fully trained sentiment adapter, ready for evaluation
 
 ### Phase 2 — Multi-Task + MLflow (Week 2)
 - [ ] Add earnings call and SEC QA datasets
@@ -361,9 +363,18 @@ GRAFANA_PORT=3000
 
 ## Status
 
-**Current phase:** Phase 1 complete (smoke test passed)
-**Smoke test result:** 200 rows, 75 steps, loss 1.97 → 1.69, adapter saved to `adapters/sentiment/`
-**Next action:** Full training on RunPod (A100, ~2 hours, ~$5) → then Task 2 (earnings call summarization)
+**Current phase:** Phase 1 — smoke test complete, full training pending
+
+| Step | Detail | Status |
+|---|---|---|
+| Dependencies installed | transformers, peft, trl, bitsandbytes, datasets | ✅ Done |
+| Data prepared | 76,000 rows, labels normalized, Qwen3 chat format | ✅ Done |
+| Data audited | Label distribution verified, no broken rows | ✅ Done |
+| Smoke test | 200 rows, 3 epochs, loss 1.97 → 1.69, adapter saved | ✅ Done |
+| Full training | 76,000 rows, 3 epochs, `learning_rate=2e-4`, GCP GPU VM | ⏳ Pending |
+| Evaluation | Accuracy on held-out test set | ⏳ Pending |
+
+**Next action:** Launch GCP GPU VM → set `MAX_ROWS = None` in `train_sentiment.py` → run full training (~2 hours) → download adapter → build evaluation script
 
 ---
 
