@@ -11,8 +11,8 @@ MODEL_NAME  = "Qwen/Qwen3-1.7B"
 DATA_PATH   = "data/training-ready.jsonl"
 OUTPUT_DIR  = "adapters/sentiment"
 
-# Set to None for full training on RunPod — 5000 for laptop smoke test
-MAX_ROWS = 200
+# Set to None for full training — set to 200 for laptop smoke test
+MAX_ROWS = None
 
 LORA = LoraConfig(
     r=16,
