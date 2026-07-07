@@ -363,7 +363,7 @@ GRAFANA_PORT=3000
 
 ## Status
 
-**Current phase:** Phase 1 — smoke test complete, full training pending
+**Current phase:** Phase 1 — full training running on RunPod A40
 
 | Step | Detail | Status |
 |---|---|---|
@@ -371,10 +371,10 @@ GRAFANA_PORT=3000
 | Data prepared | 76,000 rows, labels normalized, Qwen3 chat format | ✅ Done |
 | Data audited | Label distribution verified, no broken rows | ✅ Done |
 | Smoke test | 200 rows, 3 epochs, loss 1.97 → 1.69, adapter saved | ✅ Done |
-| Full training | 76,000 rows, 3 epochs, `learning_rate=2e-4`, GCP GPU VM | ⏳ Pending |
+| Full training | 61,417 rows, 3 epochs, `learning_rate=1e-4`, RunPod A40 | 🔄 Running |
 | Evaluation | Accuracy on held-out test set | ⏳ Pending |
 
-**Next action:** Launch GCP GPU VM → set `MAX_ROWS = None` in `train_sentiment.py` → run full training (~2 hours) → download adapter → build evaluation script
+**Next action:** Wait for training to complete (~2.5hrs) → download adapter → build evaluation script → test accuracy on `test-ready.jsonl`
 
 ---
 
