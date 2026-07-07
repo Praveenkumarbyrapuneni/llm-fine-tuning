@@ -1,12 +1,16 @@
 import json
+import random
 from pathlib import Path
 
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-MODEL_NAME = "Qwen/Qwen3-1.7B"
-DATASET_NAME = "FinGPT/fingpt-sentiment-train"
-OUTPUT_PATH = Path("data/training-ready.jsonl")
+MODEL_NAME    = "Qwen/Qwen3-1.7B"
+DATASET_NAME  = "FinGPT/fingpt-sentiment-train"
+TRAIN_PATH    = Path("data/training-ready.jsonl")
+TEST_PATH     = Path("data/test-ready.jsonl")
+TEST_SPLIT    = 0.2   # 20% held out, never seen during training
+RANDOM_SEED   = 42
 
 SYSTEM_PROMPT = (
     "You are a financial sentiment analyst. "
@@ -53,7 +57,7 @@ def format_row(row: dict, tokenizer: AutoTokenizer) -> str | None:
 
 
 def prepare() -> None:
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    TRAIN_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Loading tokenizer: {MODEL_NAME}")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -62,24 +66,33 @@ def prepare() -> None:
     dataset = load_dataset(DATASET_NAME, split="train")
     print(f"Total rows: {len(dataset):,}")
 
-    written = skipped = 0
+    # Format all valid rows first
+    formatted_rows = []
+    skipped = 0
+    for i, row in enumerate(dataset):
+        formatted = format_row(row, tokenizer)
+        if formatted is None:
+            skipped += 1
+            continue
+        formatted_rows.append(json.dumps({"text": formatted}))
+        if (i + 1) % 10_000 == 0:
+            print(f"  Processed {i + 1:,} rows...")
 
-    with OUTPUT_PATH.open("w", encoding="utf-8") as f:
-        for i, row in enumerate(dataset):
-            formatted = format_row(row, tokenizer)
-            if formatted is None:
-                skipped += 1
-                continue
-            f.write(json.dumps({"text": formatted}) + "\n")
-            written += 1
+    # Shuffle then split 80/20 — fixed seed so split is always identical
+    random.seed(RANDOM_SEED)
+    random.shuffle(formatted_rows)
+    split_idx = int(len(formatted_rows) * (1 - TEST_SPLIT))
+    train_rows = formatted_rows[:split_idx]
+    test_rows  = formatted_rows[split_idx:]
 
-            if (i + 1) % 10_000 == 0:
-                print(f"  Processed {i + 1:,} rows...")
+    TRAIN_PATH.write_text("\n".join(train_rows) + "\n", encoding="utf-8")
+    TEST_PATH.write_text("\n".join(test_rows) + "\n", encoding="utf-8")
 
     print(f"\nDone.")
-    print(f"  Written : {written:,}")
-    print(f"  Skipped : {skipped:,}")
-    print(f"  Saved to: {OUTPUT_PATH}")
+    print(f"  Total formatted : {len(formatted_rows):,}")
+    print(f"  Skipped         : {skipped:,}")
+    print(f"  Training rows   : {len(train_rows):,}  → {TRAIN_PATH}")
+    print(f"  Test rows       : {len(test_rows):,}   → {TEST_PATH}")
 
 
 if __name__ == "__main__":
