@@ -124,6 +124,37 @@ The same script runs on laptop (smoke test) and cloud (full training). Controlle
 
 ---
 
+**Decision: `per_device_train_batch_size=8`, `gradient_accumulation_steps=4` on A40**
+
+Original config was `batch_size=1, gradient_accumulation=8`. This was written for the laptop which has limited shared RAM. On the A40 with 48GB dedicated VRAM, it caused training to take ~15 hours instead of ~3 hours.
+
+**What batch size actually means:**
+The GPU processes multiple training rows simultaneously — this is the batch. Larger batch = more rows processed per step = fewer total steps = faster training. The limit is how much VRAM you have.
+
+| Setting | Rows per step | Total steps | ETA |
+|---|---|---|---|
+| batch=1, accum=8 | 8 effective | 23,034 | ~15 hours |
+| batch=8, accum=4 | 32 effective | 5,760 | ~3 hours |
+
+**Why `gradient_accumulation` exists:**
+Ideally you would set `batch_size=32` directly. But sometimes the GPU does not have enough VRAM to hold 32 rows at once. `gradient_accumulation=4` is the workaround — process 8 rows at a time, accumulate the gradients across 4 steps, then update weights. The result is mathematically identical to batch_size=32 but uses less peak VRAM.
+
+In our case the A40 can hold batch=8 directly. We keep accumulation=4 as a safety buffer so VRAM never gets tight.
+
+**Rule going forward:**
+
+| GPU | VRAM | Safe batch size for Qwen3-1.7B QLoRA |
+|---|---|---|
+| Laptop (MPS/CPU) | shared | 1 |
+| T4 | 16GB | 2–4 |
+| RTX 4090 | 24GB | 4–8 |
+| A40 | 48GB | 8–16 |
+| A100 | 80GB | 16–32 |
+
+Always start conservative and increase if training is too slow. If you get an OOM (out of memory) error — halve the batch size.
+
+---
+
 ## Phase 3 — Evaluation
 
 ### File: `evaluate_sentiment.py`
