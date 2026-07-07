@@ -155,6 +155,30 @@ Always start conservative and increase if training is too slow. If you get an OO
 
 ---
 
+**Decision: Run training with `nohup` on cloud VMs, not directly**
+
+First attempt ran training directly: `python3 train_sentiment.py`. This works but the process is tied to the browser tab. If the tab closes, times out, or loses connection — the training process is killed immediately. A 3-hour training run killed at hour 2 = wasted $0.90 and 2 hours.
+
+**The fix:**
+```bash
+nohup python3 train_sentiment.py > training.log 2>&1 &
+```
+
+- `nohup` — detaches the process from the terminal session. Runs on the server itself, not inside the browser connection.
+- `> training.log` — redirects all output to a file since there is no terminal to print to
+- `2>&1` — also captures error messages into the same file
+- `&` — runs in background, terminal prompt comes back immediately
+
+**To check progress after reconnecting:**
+```bash
+tail -f /llm-fine-tuning/training.log
+```
+
+**Rule going forward:**
+Any training run over 30 minutes on a cloud VM must use `nohup`. Direct terminal runs are only for quick tests under 5 minutes.
+
+---
+
 ## Phase 3 — Evaluation
 
 ### File: `evaluate_sentiment.py`
