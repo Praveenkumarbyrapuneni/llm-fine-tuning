@@ -155,6 +155,40 @@ Always start conservative and increase if training is too slow. If you get an OO
 
 ---
 
+**Decision: Match `bnb_4bit_compute_dtype` to training precision**
+
+When we switched training from `fp16` to `bf16`, we updated `SFTConfig(bf16=True)` but missed updating `BitsAndBytesConfig(bnb_4bit_compute_dtype=torch.float16)`.
+
+This created a dtype mismatch:
+- Quantization was computing activations in float16
+- Training was running in bfloat16
+- At every forward pass, tensors were silently cast between dtypes
+- This caused gradient instability — `grad_norm` values hit 159 (should stay below 5)
+- Result: loss went from 1.35 → 2.19 across epoch 1, model unlearned
+
+**The fix:** `bnb_4bit_compute_dtype=torch.bfloat16` — compute dtype must always match the training precision.
+
+**Rule:** If `bf16=True` in SFTConfig → `bnb_4bit_compute_dtype=torch.bfloat16`. If `fp16=True` → `bnb_4bit_compute_dtype=torch.float16`. They must always be the same.
+
+---
+
+**Decision: Reduce learning rate when increasing batch size, add warmup**
+
+Original: `batch_size=1, lr=2e-4`. When batch size was increased to 8, `lr=2e-4` was kept unchanged. This was wrong.
+
+Larger batch size means each gradient update covers more examples simultaneously — the effective update per step is more powerful. The same learning rate that was stable at batch=1 causes overshooting at batch=8.
+
+Additionally, no warmup was set. Without warmup, training starts at full learning rate on step 1 — when the adapter weights are still random. This causes large unstable updates in the early steps that are hard to recover from.
+
+**Fixes applied:**
+- `learning_rate`: `2e-4` → `1e-4` (halved for 8x larger batch)
+- `warmup_ratio=0.05` — first 5% of steps ramp lr from 0 to `1e-4` gradually
+- `lr_scheduler_type="cosine"` — smoother decay curve, standard for LoRA
+
+**Rule:** When doubling batch size, halve the learning rate. Always add `warmup_ratio=0.03–0.05` on cloud runs.
+
+---
+
 **Decision: Run training with `nohup` on cloud VMs, not directly**
 
 First attempt ran training directly: `python3 train_sentiment.py`. This works but the process is tied to the browser tab. If the tab closes, times out, or loses connection — the training process is killed immediately. A 3-hour training run killed at hour 2 = wasted $0.90 and 2 hours.
