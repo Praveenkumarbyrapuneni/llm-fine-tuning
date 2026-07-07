@@ -37,7 +37,7 @@ def load_model(device: str) -> AutoModelForCausalLM:
         bnb = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_compute_dtype=torch.bfloat16,
         )
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_NAME,
@@ -75,7 +75,9 @@ def train() -> None:
         num_train_epochs=3,
         per_device_train_batch_size=8,
         gradient_accumulation_steps=4,
-        learning_rate=2e-4,
+        learning_rate=1e-4,
+        warmup_ratio=0.05,
+        lr_scheduler_type="cosine",
         logging_steps=50,
         save_strategy="epoch",
         dataset_text_field="text",
