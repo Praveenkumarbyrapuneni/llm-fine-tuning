@@ -2,6 +2,7 @@ import os
 os.environ["USE_TF"] = "0"
 
 import json
+import re
 import torch
 from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -48,11 +49,16 @@ def extract_prompt(text: str) -> str | None:
 
 
 def extract_predicted_label(generated: str) -> str | None:
+    # First try: after </think> block
     think_end = generated.find("</think>")
     if think_end != -1:
-        generated = generated[think_end + len("</think>"):]
-    label = generated.split("<")[0].strip().lower()
-    return label if label in VALID_LABELS else None
+        after = generated[think_end + len("</think>"):]
+        label = after.split("<")[0].strip().lower()
+        if label in VALID_LABELS:
+            return label
+    # Fallback: find any valid label anywhere in the output
+    match = re.search(r"\b(positive|negative|neutral)\b", generated, re.IGNORECASE)
+    return match.group(1).lower() if match else None
 
 
 def evaluate() -> None:
@@ -62,7 +68,7 @@ def evaluate() -> None:
     print(f"Test file   : {TEST_PATH}")
 
     print("\nLoading tokenizer and model...")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_PATH)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
     dtype = torch.float16 if device in ("cuda", "mps") else torch.float32
     base_model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype=dtype)
@@ -99,7 +105,7 @@ def evaluate() -> None:
         with torch.no_grad():
             output_ids = model.generate(
                 **inputs,
-                max_new_tokens=100,
+                max_new_tokens=300,
                 do_sample=False,
                 pad_token_id=tokenizer.eos_token_id,
             )
