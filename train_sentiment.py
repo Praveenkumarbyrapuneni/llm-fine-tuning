@@ -8,7 +8,7 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from trl import SFTTrainer, SFTConfig
 
 MODEL_NAME  = "Qwen/Qwen3-1.7B"
-DATA_PATH   = "data/formatted_sentiment.jsonl"
+DATA_PATH   = "data/training-ready.jsonl"
 OUTPUT_DIR  = "adapters/sentiment"
 
 # Set to None for full training on RunPod — 5000 for laptop smoke test

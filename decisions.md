@@ -5,10 +5,10 @@
 
 ## Phase 1 — Data Preparation
 
-### File: `data/prepare_sentiment.py`
+### File: `data/dwn-train-ready.py`
 
 **What it does:**
-Downloads the FinGPT sentiment dataset from HuggingFace, cleans the rows, converts each labeled row into the Qwen3 chat format using `apply_chat_template()`, and saves the result to `data/formatted_sentiment.jsonl`.
+Downloads the FinGPT sentiment dataset from HuggingFace, cleans the rows, converts each labeled row into the Qwen3 chat format using `apply_chat_template()`, and saves the result to `data/training-ready.jsonl`.
 
 ---
 
@@ -17,15 +17,15 @@ The `trl` library automatically saves training checkpoints every N steps during 
 
 ---
 
-**Decision: prepare_sentiment.py is a separate script, not inside the training script**
+**Decision: dwn-train-ready.py is a separate script, not inside the training script**
 Formatting 76,000 rows takes time. If training crashes, we do not want to reformat the data from scratch. Saving formatted data to a file means training can restart immediately by reading the saved file. The two scripts never overlap — one prepares data, one trains.
 
 ---
 
-**Decision: Add a validation step after prepare_sentiment.py — PENDING**
+**Decision: Add a validation step after dwn-train-ready.py — PENDING**
 
 Identified by: Praveen
-Status: Not built yet — will be built after prepare_sentiment.py is complete.
+Status: Built and passing.
 
 Before sending formatted data to training we need to verify:
 - A sample of formatted rows looks correct (spot check 3-5 rows visually)
@@ -36,26 +36,26 @@ Before sending formatted data to training we need to verify:
 If the formatting is wrong or labels are heavily imbalanced, training will produce a bad model. Catching this before training starts saves hours of wasted compute.
 
 **What we will build:**
-A small `data/validate_sentiment.py` script that:
+A small `data/audit-training-ready.py` script that:
 - Prints 3 sample formatted rows so you can read them
 - Prints the label count (Bullish: X, Bearish: X, Neutral: X)
 - Flags if any label has less than 20% of total rows
 
-This runs after prepare_sentiment.py and before the training script. Takes 10 seconds to run.
+This runs after dwn-train-ready.py and before the training script. Takes 10 seconds to run.
 
 ---
 
 ---
 
-### File: `data/validate_sentiment.py`
+### File: `data/audit-training-ready.py`
 
 **What it does:**
-Reads `data/formatted_sentiment.jsonl`, prints 3 sample rows for visual inspection, counts label distribution, flags any broken or empty rows. Runs in under 10 seconds. Must pass before training starts.
+Reads `data/training-ready.jsonl`, prints 3 sample rows for visual inspection, counts label distribution, flags any broken or empty rows. Runs in under 10 seconds. Must pass before training starts.
 
 ---
 
-**Decision: validate_sentiment.py is a separate script, not inside prepare_sentiment.py**
-Preparation and validation are two different jobs. If you put validation inside prepare, you cannot re-run validation alone after fixing a bug. Keeping them separate means: fix prepare → rerun prepare → rerun validate → confirm clean → train. Each step is independently restartable.
+**Decision: audit-training-ready.py is a separate script, not inside dwn-train-ready.py**
+Preparation and validation are two different jobs. If you put validation inside prepare, you cannot re-run validation alone after fixing a bug. Keeping them separate means: fix dwn-train-ready.py → rerun it → rerun audit-training-ready.py → confirm clean → train. Each step is independently restartable.
 
 ---
 
@@ -64,7 +64,7 @@ Preparation and validation are two different jobs. If you put validation inside 
 
 ---
 
-**Decision: Three cases handled in `build_user_message()` inside prepare_sentiment.py**
+**Decision: Three cases handled in `build_user_message()` inside dwn-train-ready.py**
 
 The FinGPT dataset has three different row shapes that must all be handled correctly:
 

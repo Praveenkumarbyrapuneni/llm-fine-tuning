@@ -6,7 +6,7 @@ from transformers import AutoTokenizer
 
 MODEL_NAME = "Qwen/Qwen3-1.7B"
 DATASET_NAME = "FinGPT/fingpt-sentiment-train"
-OUTPUT_PATH = Path("data/formatted_sentiment.jsonl")
+OUTPUT_PATH = Path("data/training-ready.jsonl")
 
 SYSTEM_PROMPT = (
     "You are a financial sentiment analyst. "

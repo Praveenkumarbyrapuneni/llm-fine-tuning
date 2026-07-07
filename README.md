@@ -53,9 +53,9 @@ You are building the open-source version of it, learning every concept from scra
 ## Datasets (All Free, All Public)
 
 ```
-1. AI4Finance-Foundation/fingpt-sentiment-train
+1. FinGPT/fingpt-sentiment-train
    - 76,000 financial news headlines with sentiment labels
-   - HuggingFace: datasets.load_dataset("AI4Finance-Foundation/fingpt-sentiment-train")
+   - HuggingFace: datasets.load_dataset("FinGPT/fingpt-sentiment-train")
 
 2. financial_phrasebank
    - 4,845 sentences labeled by finance professionals
@@ -119,7 +119,7 @@ finance-llm-finetune/
 ├── docker-compose.yml                 ← vLLM + FastAPI + Prometheus + Grafana
 │
 ├── data/
-│   ├── prepare_sentiment.py           ← Download FinGPT sentiment dataset, format it
+│   ├── dwn-train-ready.py             ← Download FinGPT sentiment dataset, normalize 9 labels → 3, format to Qwen3 chat format
 │   ├── prepare_earningscalls.py       ← Download earnings call dataset, format it
 │   ├── prepare_secqa.py               ← Pull SEC filings, generate QA pairs
 │   └── merge_datasets.py              ← Combine all 3 into one instruction dataset
@@ -292,7 +292,7 @@ GRAFANA_PORT=3000
 
 ### Phase 1 — Data + First Training Run (Week 1)
 - [ ] Install dependencies: transformers, peft, trl, bitsandbytes, datasets
-- [ ] Run `prepare_sentiment.py` — download FinGPT dataset, verify it loads
+- [x] Run `dwn-train-ready.py` — download FinGPT dataset, normalize labels, format to Qwen3 chat format
 - [ ] Format into instruction template, tokenize with Qwen 3 tokenizer
 - [ ] Run first training job on Qwen 3 1.7B (laptop, just to see it work)
 - [ ] Verify loss goes down, model produces sensible outputs
@@ -361,14 +361,9 @@ GRAFANA_PORT=3000
 
 ## Status
 
-**Current phase:** Not started
-**Next action when ready:** Install dependencies and run `prepare_sentiment.py`
-
-```bash
-pip install transformers peft trl bitsandbytes datasets mlflow fastapi uvicorn
-```
-
-Then open `data/prepare_sentiment.py` and run it. That is step one.
+**Current phase:** Phase 1 complete (smoke test passed)
+**Smoke test result:** 200 rows, 75 steps, loss 1.97 → 1.69, adapter saved to `adapters/sentiment/`
+**Next action:** Full training on RunPod (A100, ~2 hours, ~$5) → then Task 2 (earnings call summarization)
 
 ---
 

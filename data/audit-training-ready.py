@@ -2,7 +2,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
-INPUT_PATH = Path("data/formatted_sentiment.jsonl")
+INPUT_PATH = Path("data/training-ready.jsonl")
 VALID_LABELS = {"positive", "negative", "neutral"}
 SAMPLE_COUNT = 3
 
@@ -28,7 +28,7 @@ def extract_label(text: str) -> str | None:
 def validate() -> None:
     if not INPUT_PATH.exists():
         print(f"File not found: {INPUT_PATH}")
-        print("Run prepare_sentiment.py first.")
+        print("Run dwn-train-ready.py first.")
         return
 
     rows = INPUT_PATH.read_text(encoding="utf-8").splitlines()
@@ -74,7 +74,7 @@ def validate() -> None:
 
     if broken:
         print(f"  Broken at lines: {broken[:10]} {'...' if len(broken) > 10 else ''}")
-        print("\n  Fix prepare_sentiment.py and rerun.")
+        print("\n  Fix dwn-train-ready.py and rerun.")
     else:
         print("\n  All rows valid. Ready for training.")
 
