@@ -80,7 +80,7 @@ def train() -> None:
         save_strategy="epoch",
         dataset_text_field="text",
         max_length=512,
-        fp16=(device == "cuda"),
+        bf16=(device == "cuda"),
         report_to="none",
     )
 
